@@ -9,14 +9,14 @@ function onHttpStart() {
 }
 
 // setup a 'route' to listen on the default url path (http://localhost)
-app.get("/home", function (req, res) {
+app.get("/about", function (req, res) {
   res.send(
     "Pushparaj Bhattarai<br /><a href='/about'>Go to the about page</a>"
   );
 });
 
 // setup another route to listen on /about
-app.get("/about", function (req, res) {
+app.get("/home", function (req, res) {
   res.send("<h3>About Pushparaj Bhattarai <br></h3>");
 });
 

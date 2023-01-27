@@ -22,7 +22,6 @@ app.get("/about", function (req, res) {
 
 // setup http server to listen on HTTP_PORT
 app.listen(HTTP_PORT, onHttpStart);
-/ setup the static folder that static resources can load from
+// setup the static folder that static resources can load from
 // like images, css files, etc.
 app.use(express.static("public"));
-

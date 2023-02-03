@@ -2,8 +2,7 @@
 var express = require("express");
 var app = express();
 const path = require("path");
-
-const dataService = require("./data-service"); // not used in this example
+const dataService = require("./data-service.js");
 
 var HTTP_PORT = process.env.PORT || 8080;
 
@@ -79,7 +78,7 @@ app.get("/users", (req, res) => {
   if (!req.query.json4api) {
     res.send(`<h2>Data received from query string (or query parameters)</h2>
             <ol>
-               <li>req.query.occupation: ${req.query.occupation} </li> 
+               <li>req.query.occupation: ${req.query.occupation} </li>
                <li>req.query.page: ${req.query.page} </li>
                <li>req.query.perPage: ${req.query.perPage} </li>
             </ol>
@@ -107,10 +106,29 @@ app.get("/users/:id", (req, res) => {
   var parameters = req.params;
   res.send(`<h2>Data received from parameter(s) in route</h2>
     <ul>
-      <li>req.params.id: ${req.params.id} </li> 
+      <li>req.params.id: ${req.params.id} </li>
       <li>req.params (all in one obj): ${JSON.stringify(req.params)} </li>
     </ul>
   `);
+});
+
+app.get("/students", (req, res) => {
+  res.sendFile(path.join(__dirname, "/data/students.json"));
+});
+
+app.get("/intlstudents", (req, res) => {
+  dataService
+    .getIntlStudents()
+    .then((data) => {
+      res.json(data);
+    })
+    .catch((err) => {
+      res.send(err);
+    });
+});
+
+app.get("/programs", (req, res) => {
+  res.sendFile(path.join(__dirname, "/data/programs.json"));
 });
 
 // This use() will not allow requests to go beyond it
@@ -155,3 +173,5 @@ app.listen(HTTP_PORT, onHttpStart);
 
 // * easy-to-use debugging tool:
 //   console.log("variable name or desc: ", dataVar);
+
+// custom 404 page not found error handling middleware

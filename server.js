@@ -3,6 +3,9 @@ var express = require("express");
 var app = express();
 const path = require("path");
 const dataService = require("./data-service.js");
+const students = require("./data/students.json");
+
+console.log(students);
 
 var HTTP_PORT = process.env.PORT || 8080;
 
@@ -117,15 +120,20 @@ app.get("/students", (req, res) => {
 });
 
 app.get("/intlstudents", (req, res) => {
-  dataService
-    .getIntlStudents()
-    .then((data) => {
-      res.json(data);
-    })
-    .catch((err) => {
-      res.send(err);
-    });
+  const internationalStudents = students.filter(
+    (student) => student.isInternationalStudent === true
+  );
+  res.send(internationalStudents);
 });
+//   dataService
+//     .getIntlStudents()
+//     .then((data) => {
+//       res.json(data);
+//     })
+//     .catch((err) => {
+//       res.send(err);
+//     });
+// });
 
 app.get("/programs", (req, res) => {
   res.sendFile(path.join(__dirname, "/data/programs.json"));
@@ -143,35 +151,3 @@ app.use((req, res) => {
 
 // setup http server to listen on HTTP_PORT
 app.listen(HTTP_PORT, onHttpStart);
-
-// * 3 important objects in express.js:
-//   app, req, res
-
-// * Routing - Defining routes in Express.js. The structure is:
-//   app.METHOD(PATH, HANDLER)   // HANDLER:  function(req, res) { ... }
-
-// * app.get() vs app.post() in WEB APPs
-//   1. app.post() - is used for processing FORM submission: the form data is in the http body, <form method="post">...
-//   2. app.get() - is used for presenting html FORM, web page, text in a web page
-//   -. note: We don't use app.update() or app.delete() in web apps;
-//          Instead, we use app.get() vs app.post() to define routes of CRUD operations.
-
-// * What are the CRUD operations for manipulating data in Web API (e.g. week 9), +...
-//   C - Create new object - app.post("/api/users", (req,res)=>{...})
-//   R - Retrieve/Read:
-//       Get All (objects) - app.get("/api/users", (req,res)=>{...})
-//       Get One (object)  - app.get("/api/users/:id", (req,res)=>{...})
-//   U - Update/Edit existing (object) - app.put("/api/users/:id", (req,res)=>{...})
-//
-//   D - Delete item (/object) - app.delete("/api/users/:id", (req,res)=>{...})
-
-// * The ways to use http request to send data to server
-//   1. using query string on url, e.g. ?fname=John&lname=Doe - to access the data on server: req.query.fname
-//   2. using the body of http request  e.g. sending form data - to access the data on server: req.body.fname
-//   3. using parameter in the route, e.g. PATH or route: "/members/:id" - to access the data on server: req.params.id
-//   4. using cookies
-
-// * easy-to-use debugging tool:
-//   console.log("variable name or desc: ", dataVar);
-
-// custom 404 page not found error handling middleware

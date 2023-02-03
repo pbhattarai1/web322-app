@@ -4,8 +4,7 @@ var app = express();
 const path = require("path");
 const dataService = require("./data-service.js");
 const students = require("./data/students.json");
-
-console.log(students);
+const programs = require("./data/programs.json");
 
 var HTTP_PORT = process.env.PORT || 8080;
 
@@ -116,27 +115,42 @@ app.get("/users/:id", (req, res) => {
 });
 
 app.get("/students", (req, res) => {
-  res.sendFile(path.join(__dirname, "/data/students.json"));
+  console.log("pass");
+  dataService
+    .getAllStudents()
+    .then((students) => {
+      console.log("pass1");
+      res.json(students);
+    })
+    .catch((err) => {
+      console.log("pass2");
+      res.json({ message: err });
+    });
 });
 
 app.get("/intlstudents", (req, res) => {
-  const internationalStudents = students.filter(
-    (student) => student.isInternationalStudent === true
-  );
-  res.send(internationalStudents);
+  dataService
+    .getInternationalStudents()
+    .then((students) => {
+      const internationalStudents = students.filter(
+        (student) => student.isInternationalStudent === true
+      );
+      res.json(internationalStudents);
+    })
+    .catch((err) => {
+      res.json({ message: err });
+    });
 });
-//   dataService
-//     .getIntlStudents()
-//     .then((data) => {
-//       res.json(data);
-//     })
-//     .catch((err) => {
-//       res.send(err);
-//     });
-// });
 
 app.get("/programs", (req, res) => {
-  res.sendFile(path.join(__dirname, "/data/programs.json"));
+  dataService
+    .getPrograms()
+    .then((programs) => {
+      res.json(programs);
+    })
+    .catch((err) => {
+      res.json({ message: err });
+    });
 });
 
 // This use() will not allow requests to go beyond it
@@ -150,4 +164,4 @@ app.use((req, res) => {
 });
 
 // setup http server to listen on HTTP_PORT
-app.listen(HTTP_PORT, onHttpStart);
+app.listen(HTTP_PORT, onHttpStart, dataService.initialize);

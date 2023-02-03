@@ -1,3 +1,14 @@
+/*********************************************************************************
+ *  WEB322 – Assignment 02
+ *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part *  of this assignment has been copied manually or electronically from any other source
+ *  (including 3rd party web sites) or distributed to other students.
+ *
+ *  Name: __Pushparaj Bhattarai__ Student ID: _159658210_upda___ Date: _____2023/02/03___________
+ *
+ *  Online (Cyclic) Link:
+ *
+ ********************************************************************************/
+
 // server.js: start from week 2 example
 var express = require("express");
 var app = express();

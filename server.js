@@ -16,8 +16,24 @@ const path = require("path");
 const dataService = require("./data-service.js");
 const students = require("./data/students.json");
 const programs = require("./data/programs.json");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
+// Adding the express.urlencoded middleware
+app.use(express.urlencoded({ extended: true }));
 
-var HTTP_PORT = process.env.PORT || 8080;
+var HTTP_PORT = process.env.PORT || 8081;
+
+//config:
+cloudinary.config({
+  cloud_name: "dhufqu7is",
+  api_key: "554885395163495",
+  api_secret: "dShbbMbD1YOFcIiosDaEe0F7QZY",
+  secure: true,
+});
+
+//multer
+const upload = multer(); //no { storage: storage } since we are not using disk storage
 
 app.locals.title = "WEB322-APP";
 
@@ -43,7 +59,13 @@ app.get("/about", function (request, res) {
   // res.send("<h2>About</h2><p>This is the about page</p>")
   res.sendFile(path.join(__dirname, "/views/about.html"));
 });
-
+//new route to listen on /students/add
+app.get("/students/add", function (req, res) {
+  res.sendFile(path.join(__dirname, "/views/addStudent.html"));
+}); //new route to listen on /images/add
+app.get("/images/add", function (req, res) {
+  res.sendFile(path.join(__dirname, "/views/addImage.html"));
+});
 // IE: http://localhost:8080/headers
 app.get("/headers", (req, res) => {
   var userAgent = req.get("user-agent");
@@ -113,6 +135,65 @@ app.get("/posts", (req, res) => {
   }
 });
 
+// //route to add a "post"
+app.post("/images/add", upload.single("imageFile"), (req, res) => {
+  if (req.file) {
+    let streamUpload = (req) => {
+      return new Promise((resolve, reject) => {
+        let stream = cloudinary.uploader.upload_stream((error, result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(error);
+          }
+        });
+
+        streamifier.createReadStream(req.file.buffer).pipe(stream);
+      });
+    };
+
+    async function upload(req) {
+      let result = await streamUpload(req);
+      console.log(result);
+      return result;
+    }
+
+    upload(req).then((uploaded) => {
+      processForm(uploaded.url);
+    });
+  } else {
+    processForm("");
+  }
+
+  function processForm(imageUrl) {
+    cloudinary.uploader.upload(imageUrl, (error, result) => {
+      if (error) {
+        console.error(error);
+      } else {
+        const image = {
+          id: dataService.getNextImageId(),
+          url: result.secure_url,
+          created_at: result.created_at,
+        };
+        dataService.addImage(image);
+        res.redirect("/images");
+      }
+    });
+  }
+});
+
+// GET route to return the URLs of images stored on Cloudinary
+app.get("/images", async (req, res) => {
+  try {
+    const result = await cloudinary.api.resources();
+    const urls = result.resources.map((image) => image.url);
+    res.json({ images: urls });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Read/retrieve - Get One user
 // define a route to get/show a specific user
 app.get("/users/:id", (req, res) => {
@@ -127,15 +208,66 @@ app.get("/users/:id", (req, res) => {
 
 app.get("/students", (req, res) => {
   console.log("pass");
+  if (req.query.status) {
+    dataService
+      .getStudentsByStatus(req.query.status)
+      .then((students) => {
+        console.log("pass1");
+        res.json(students);
+      })
+      .catch((err) => {
+        console.log("pass2");
+        res.json({ message: err });
+      });
+  } else if (req.query.program) {
+    dataService
+      .getStudentsByProgramCode(req.query.program)
+      .then((students) => {
+        console.log("pass1");
+        res.json(students);
+      })
+      .catch((err) => {
+        console.log("pass2");
+        res.json({ message: err });
+      });
+  } else if (req.query.credential) {
+    dataService
+      .getStudentsByExpectedCredential(req.query.credential)
+      .then((students) => {
+        console.log("pass1");
+        res.json(students);
+      })
+      .catch((err) => {
+        console.log("pass2");
+        res.json({ message: err });
+      });
+  } else {
+    dataService
+      .getAllStudents()
+      .then((students) => {
+        console.log("pass1");
+        res.json(students);
+      })
+      .catch((err) => {
+        console.log("pass2");
+        res.json({ message: err });
+      });
+  }
+});
+
+app.get("/student/:id", (req, res) => {
+  const studentId = req.params.id;
   dataService
-    .getAllStudents()
-    .then((students) => {
-      console.log("pass1");
-      res.json(students);
+    .getStudentById(studentId)
+    .then((student) => {
+      if (student) {
+        res.json(student);
+      } else {
+        res.status(404).json({ message: "Student not found" });
+      }
     })
     .catch((err) => {
-      console.log("pass2");
-      res.json({ message: err });
+      res.status(500).json({ message: err });
     });
 });
 
@@ -161,6 +293,18 @@ app.get("/programs", (req, res) => {
     })
     .catch((err) => {
       res.json({ message: err });
+    });
+});
+// Adding the "Post" route
+app.post("/students/add", (req, res) => {
+  dataService
+    .addStudent(req.body)
+    .then(() => {
+      res.redirect("/students");
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("Error adding student");
     });
 });
 

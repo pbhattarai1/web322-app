@@ -207,6 +207,7 @@ app.get("/users/:id", (req, res) => {
 });
 
 app.get("/students", (req, res) => {
+  //updated student route
   console.log("pass");
   if (req.query.status) {
     dataService

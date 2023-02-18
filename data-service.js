@@ -145,7 +145,7 @@ function getStudentsByExpectedCredential(credential) {
   });
 }
 
-function getStudentById(sid) {
+function getStudentById(sid) //return student by id
   return new Promise((resolve, reject) => {
     const student = students.find((student) => student.studentID === sid);
     if (!student) {

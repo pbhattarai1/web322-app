@@ -145,7 +145,7 @@ function getStudentsByExpectedCredential(credential) {
   });
 }
 
-function getStudentById(sid) //return student by id
+function getStudentById(sid){//return student by id
   return new Promise((resolve, reject) => {
     const student = students.find((student) => student.studentID === sid);
     if (!student) {
@@ -155,6 +155,18 @@ function getStudentById(sid) //return student by id
     }
   });
 }
+
+function updateStudent(studentData) {
+  return new Promise((resolve, reject) => {
+  const index = students.findIndex((student) => student.studentID === studentData.studentID);
+  if (index === -1) {
+  reject("Student not found");
+  } else {
+  students[index] = studentData;
+  resolve();
+  }
+  });
+  }
 
 module.exports = {
   initialize,
@@ -169,4 +181,5 @@ module.exports = {
   getStudentsByProgramCode,
   getStudentsByExpectedCredential,
   getStudentById,
+  updateStudent,
 };

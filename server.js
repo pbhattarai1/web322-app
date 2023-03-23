@@ -22,7 +22,7 @@ const streamifier = require("streamifier");
 // Adding the express.urlencoded middleware
 app.use(express.urlencoded({ extended: true }));
 
-var HTTP_PORT = process.env.PORT || 8081;
+var HTTP_PORT = process.env.PORT || 8088;
 
 //config:
 cloudinary.config({
@@ -31,6 +31,36 @@ cloudinary.config({
   api_secret: "dShbbMbD1YOFcIiosDaEe0F7QZY",
   secure: true,
 });
+
+const expressHandlebars = require('express-handlebars');
+
+// configure express-handlebars
+app.set('view engine', 'hbs');
+app.engine('hbs', expressHandlebars.engine({
+  extname: 'hbs',
+  helpers: {
+    navLink: function(url, options){
+      return '<li' +
+      ((url == app.locals.activeRoute) ? ' class="active" ' : '') +
+      '><a href="' + url + '">' + options.fn(this) + '</a></li>';
+     },
+
+     equal: function (lvalue, rvalue, options) {
+      if (arguments.length < 3)
+      throw new Error("Handlebars Helper equal needs 2 parameters");
+      if (lvalue != rvalue) {
+      return options.inverse(this);
+      } else {
+      return options.fn(this);
+      }
+     },
+
+     safeHTML: function(context){
+      return stripJs(context);
+     }
+  },
+  layoutsDir: __dirname + "/views/layout",
+  defaultLayout: 'main'}));
 
 //multer
 const upload = multer(); //no { storage: storage } since we are not using disk storage
@@ -50,21 +80,28 @@ function onHttpStart() {
   console.log("Express http server listening on: " + HTTP_PORT);
 }
 
+app.use(function(req, res, next){
+  let route = req.baseUrl + req.path;
+  app.locals.activeRoute = (route == "/") ? "/" : route.replace(/\/$/, "");
+  next();
+});
+
+
 // setup the "root" 'route' to listen on the default url path (http://localhost)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "/views/home.html"));
+  res.render('home');
 });
 
 app.get("/about", function (request, res) {
   // res.send("<h2>About</h2><p>This is the about page</p>")
-  res.sendFile(path.join(__dirname, "/views/about.html"));
+  res.render('about');
 });
 //new route to listen on /students/add
 app.get("/students/add", function (req, res) {
-  res.sendFile(path.join(__dirname, "/views/addStudent.html"));
+  res.render('addStudent');
 }); //new route to listen on /images/add
 app.get("/images/add", function (req, res) {
-  res.sendFile(path.join(__dirname, "/views/addImage.html"));
+  res.render('addImage');
 });
 // IE: http://localhost:8080/headers
 app.get("/headers", (req, res) => {
@@ -187,12 +224,13 @@ app.get("/images", async (req, res) => {
   try {
     const result = await cloudinary.api.resources();
     const urls = result.resources.map((image) => image.url);
-    res.json({ images: urls });
+    res.render("images", { images: urls });
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 // Read/retrieve - Get One user
 // define a route to get/show a specific user
@@ -207,70 +245,74 @@ app.get("/users/:id", (req, res) => {
 });
 
 app.get("/students", (req, res) => {
-  //updated student route
-  console.log("pass");
   if (req.query.status) {
-    dataService
-      .getStudentsByStatus(req.query.status)
-      .then((students) => {
-        console.log("pass1");
-        res.json(students);
-      })
-      .catch((err) => {
-        console.log("pass2");
-        res.json({ message: err });
-      });
-  } else if (req.query.program) {
-    dataService
-      .getStudentsByProgramCode(req.query.program)
-      .then((students) => {
-        console.log("pass1");
-        res.json(students);
-      })
-      .catch((err) => {
-        console.log("pass2");
-        res.json({ message: err });
-      });
-  } else if (req.query.credential) {
-    dataService
-      .getStudentsByExpectedCredential(req.query.credential)
-      .then((students) => {
-        console.log("pass1");
-        res.json(students);
-      })
-      .catch((err) => {
-        console.log("pass2");
-        res.json({ message: err });
-      });
-  } else {
-    dataService
-      .getAllStudents()
-      .then((students) => {
-        console.log("pass1");
-        res.json(students);
-      })
-      .catch((err) => {
-        console.log("pass2");
-        res.json({ message: err });
-      });
-  }
-});
-
-app.get("/student/:id", (req, res) => {
-  const studentId = req.params.id;
   dataService
-    .getStudentById(studentId)
-    .then((student) => {
-      if (student) {
-        res.json(student);
-      } else {
-        res.status(404).json({ message: "Student not found" });
-      }
-    })
-    .catch((err) => {
-      res.status(500).json({ message: err });
-    });
-});
+  .getStudentsByStatus(req.query.status)
+  .then((students) => {
+  res.render("students", { students: students });
+  })
+  .catch((err) => {
+  res.render("students", { message: "no results" });
+  });
+  } else if (req.query.program) {
+  dataService
+  .getStudentsByProgramCode(req.query.program)
+  .then((students) => {
+  res.render("students", { students: students });
+  })
+  .catch((err) => {
+  res.render("students", { message: "no results" });
+  });
+  } else if (req.query.credential) {
+  dataService
+  .getStudentsByExpectedCredential(req.query.credential)
+  .then((students) => {
+  res.render("students", { students: students });
+  })
+  .catch((err) => {
+  res.render("students", { message: "no results" });
+  });
+  } else {
+  dataService
+  .getAllStudents()
+  .then((students) => {
+  res.render("students", { students: students });
+  })
+  .catch((err) => {
+  res.render("students", { message: "no results" });
+  });
+  }
+  });
+
+  app.post("/student/update", (req, res) => {
+    updateStudent(req.body)
+      .then(() => {
+        res.redirect("/students");
+      })
+      .catch((err) => {
+        console.error(err);
+        res.status(500).send("Error updating student");
+      });
+  });
+  
+
+
+  app.get("/student/:id", (req, res) => {
+    const studentId = req.params.id;
+    dataService
+      .getStudentById(studentId)
+      .then((student) => {
+        if (student) {
+          res.render("student", { student: student });
+        } else {
+          res.render("student", { message: "no results" });
+        }
+      })
+      .catch((err) => {
+        res.render("student", { message: "no results" });
+      });
+  });
+  
 
 app.get("/intlstudents", (req, res) => {
   dataService
@@ -290,12 +332,13 @@ app.get("/programs", (req, res) => {
   dataService
     .getPrograms()
     .then((programs) => {
-      res.json(programs);
+      res.render("programs", { programs: programs });
     })
     .catch((err) => {
       res.json({ message: err });
     });
 });
+
 // Adding the "Post" route
 app.post("/students/add", (req, res) => {
   dataService

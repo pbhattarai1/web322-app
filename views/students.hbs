@@ -1,3 +1,4 @@
+<a href="/students/add" class="btn btn-success pull-right">Add New Student</a>
 <div class="row">
   <div class="col-md-12">
     <h2>Students</h2>
@@ -27,8 +28,9 @@
         <td>{{addressStreet}} {{addressCity}} {{addressState}} {{addressPostal}}</td>
         <td><a href="/students?credential={{expectedCredential}}">{{expectedCredential}}</a></td>
         <td><a href="/students?status={{status}}">{{status}}</a></td>
-        <td><a href="/students?program={{program}}">{{program}}</a></td>
+        <td><a href="/students?program={{Program}}">{{Program}}</a></td>
         <td>{{registrationDate}}</td>
+          <td><a href="/students/delete/{{id}}" class="btn btn-danger">Remove</a></td>
       </tr>
       {{/each}}
     </tbody>

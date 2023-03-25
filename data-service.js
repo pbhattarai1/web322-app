@@ -338,9 +338,11 @@ function deleteStudentById(id) {
       if (rowsDeleted === 0) {
         reject(new Error('Student not found'));
       } else {
+        console.log('pass');
         resolve();
       }
     }).catch((err) => {
+      console.log('fail');
       reject(err);
     });
   });

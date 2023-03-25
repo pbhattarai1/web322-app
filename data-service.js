@@ -1,185 +1,369 @@
-const fs = require("fs");
+//const { Sequelize, Op } = require('sequelize');
 
-let students = [];
-let programs = [];
-let images = [];
+const Sequelize = require('sequelize');
+
+var sequelize = new Sequelize('yrorypxv', 'yrorypxv', 'yLM1QNXwpb38dcZ7jAEUHa5HZEMza9dV', {
+  host: 'raja.db.elephantsql.com',
+  dialect: 'postgres',
+  port: 5432,
+  dialectOptions: {
+      ssl: { rejectUnauthorized: false }
+  }
+  , query: { raw: true }
+});
+
+
+// const sequelize = new Sequelize({
+//   dialect: 'sqlite',
+//   storage: 'data/db/database.sqlite'
+// });
+
+const Student = sequelize.define('student', {
+  studentID: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  firstName:Sequelize.STRING,
+  lastName: {
+    type: Sequelize.STRING
+  },
+  email: {
+    type: Sequelize.STRING
+  },
+  phone: {
+    type: Sequelize.STRING
+  },
+  addressStreet: {
+    type: Sequelize.STRING
+  },
+  addressCity: {
+    type: Sequelize.STRING
+  },
+  addressState: {
+    type: Sequelize.STRING
+  },
+  addressPostal: {
+    type: Sequelize.STRING
+  },
+  isInternationalStudent: {
+    type: Sequelize.BOOLEAN
+  },
+  expectedCredential: {
+    type: Sequelize.STRING
+  },
+  status: {
+    type: Sequelize.STRING
+  },
+  registrationDate: {
+    type: Sequelize.STRING
+  }
+});
+
+const Image = sequelize.define('image', {
+  imageID: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  imageUrl: {
+    type: Sequelize.STRING
+  },
+  version: {
+    type: Sequelize.INTEGER
+  },
+  width: {
+    type: Sequelize.INTEGER
+  },
+  height: {
+    type: Sequelize.INTEGER
+  },
+  format: {
+    type: Sequelize.STRING
+  },
+  resourceType: {
+    type: Sequelize.STRING
+  },
+  uploadedAt: {
+    type: Sequelize.DATE
+  },
+  originalFileName: {
+    type: Sequelize.STRING
+  },
+  mimeType: {
+    type: Sequelize.STRING
+  }
+});
+
+const Program = sequelize.define('program', {
+  programCode: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  programName: {
+    type: Sequelize.STRING
+  }
+});
+
+Program.hasMany(Student, { foreignKey: 'program' });
 
 function initialize() {
-  return new Promise((resolve, reject) => {
-    fs.readFile("./data/students.json", "utf8", (err, data) => {
-      if (err) {
-        reject("unable to read file");
-      }
-      students = JSON.parse(data);
-      fs.readFile("./data/programs.json", "utf8", (err, data) => {
-        if (err) {
-          reject("unable to read file");
-        }
-        programs = JSON.parse(data);
-        resolve();
-      });
+  return sequelize.sync()
+    .then(() => {
+      console.log('Database connected and tables synced!');
+    })
+    .catch(error => {
+      console.error('Unable to sync the database:', error);
+      //throw new Error('Unable to sync the database');
     });
-  });
 }
 
 function getAllStudents() {
-  return new Promise((resolve, reject) => {
-    if (students.length === 0) {
-      reject("no results returned");
-    }
-    resolve(students);
-  });
-}
-
-function getInternationalStudents() {
-  return new Promise((resolve, reject) => {
-    const internationalStudents = students.filter(
-      (student) => student.isInternationalStudent
-    );
-    if (internationalStudents.length === 0) {
-      reject("no results returned");
-    }
-    resolve(internationalStudents);
-  });
-}
-
-function getPrograms() {
-  return new Promise((resolve, reject) => {
-    if (programs.length === 0) {
-      reject("no results returned");
-    }
-    resolve(programs);
-  });
-}
-
-function addImage(imageUrl) {
-  return new Promise((resolve, reject) => {
-    images.push(imageUrl);
-    resolve();
-  });
-}
-
-function getImages() {
-  return new Promise((resolve, reject) => {
-    if (images.length === 0) {
-      reject("no results returned");
-    }
-    resolve(images);
-  });
-}
-
-function getNextImageId() {
-  return new Promise((resolve, reject) => {
-    if (images.length === 0) {
-      reject("no results returned");
-    } else {
-      const nextImage = images[images.length - 1];
-      const nextId = nextImage.id + 1;
-      resolve(nextId);
-    }
-  });
-}
-// Function to add a new student
-function addStudent(studentData) {
-  return new Promise((resolve, reject) => {
-    // Set isInternationalStudent to false if it's undefined
-    if (studentData.isInternationalStudent === undefined) {
-      studentData.isInternationalStudent = false;
-    } else {
-      studentData.isInternationalStudent = true;
-    }
-
-    // Find the maximum studentID value and add 1 for the new studentID
-    const maxID = students.reduce((max, student) => {
-      const studentIDNum = parseInt(student.studentID, 10);
-      return studentIDNum > max ? studentIDNum : max;
-    }, 0);
-    const newID = (maxID + 1).toString();
-    studentData.studentID = newID;
-
-    // Add the new student to the students array and save to file
-    students.push(studentData);
-    fs.writeFile("./data/students.json", JSON.stringify(students), (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
+  return Student.findAll()
+    .then(students => {
+      if (!students.length) {
+        throw new Error('No results returned');
       }
+      return students;
+    })
+    .catch(error => {
+      console.error('Error while getting all students:', error);
+      throw new Error('No results returned');
     });
-  });
 }
+
 function getStudentsByStatus(status) {
-  return new Promise((resolve, reject) => {
-    const studentsByStatus = students.filter(
-      (student) => student.status === status
-    );
-    if (studentsByStatus.length === 0) {
-      reject("no results returned");
+  return Student.findAll({
+    where: {
+      status: {
+        [Op.eq]: status
+      }
     }
-    resolve(studentsByStatus);
-  });
+  })
+    .then(students => {
+      if (!students.length) {
+        throw new Error('No results returned');
+      }
+      return students;
+    })
+    .catch(error => {
+      console.error('Error while getting students by status:', error);
+      throw new Error('No results returned');
+    });
 }
+
 function getStudentsByProgramCode(programCode) {
-  return new Promise((resolve, reject) => {
-    const filteredStudents = students.filter(
-      (student) => student.program === programCode
-    );
-    if (filteredStudents.length === 0) {
-      reject("no results returned");
-    } else {
-      resolve(filteredStudents);
+  return Student.findAll({
+    where: {
+      program: {
+        [Op.eq]: programCode
+      }
     }
-  });
+  })
+    .then(students => {
+      if (!students.length) {
+        throw new Error('No results returned');
+      }
+      return students;
+    })
+    .catch(error => {
+      console.error('Error while getting students by program code:', error);
+      throw new Error('No results returned');
+    });
 }
 
 function getStudentsByExpectedCredential(credential) {
-  return new Promise((resolve, reject) => {
-    const filteredStudents = students.filter(
-      (student) => student.expectedCredential === credential
-    );
-    if (filteredStudents.length === 0) {
-      reject("no results returned");
-    } else {
-      resolve(filteredStudents);
+  return Student.findAll({
+    where: {
+      expectedCredential: credential
     }
-  });
+  })
+    .then((students) => {
+      if (students.length === 0) {
+        throw new Error('No students found with expected credential ' + credential);
+      }
+      return students;
+    });
+}
+// getStudentById function
+function getStudentById(id) {
+  return Student.findAll({
+    where: { studentID: id }
+  })
+    .then(data => {
+      if (data.length > 0) {
+        return Promise.resolve(data[0]);
+      } else {
+        return Promise.reject("no results returned");
+      }
+    })
+    .catch(err => Promise.reject(err.message));
 }
 
-function getStudentById(sid){//return student by id
-  return new Promise((resolve, reject) => {
-    const student = students.find((student) => student.studentID === sid);
-    if (!student) {
-      reject("no result returned");
-    } else {
-      resolve(student);
-    }
-  });
+// getPrograms function
+function getPrograms() {
+  return Program.findAll()
+    .then(data => Promise.resolve(data))
+    .catch(() => Promise.reject("no results returned"));
 }
 
+// addStudent function
+function addStudent(studentData) {
+  studentData.isInternationalStudent =
+    studentData.isInternationalStudent === true;
+  for (let key in studentData) {
+    if (studentData.hasOwnProperty(key) && studentData[key] === "") {
+      studentData[key] = null;
+    }
+  }
+  return Student.create(studentData)
+    .then(() => Promise.resolve())
+    .catch(() => Promise.reject("unable to create student"));
+}
+
+// updateStudent function
 function updateStudent(studentData) {
+  studentData.isInternationalStudent =
+    studentData.isInternationalStudent === true;
+  for (let key in studentData) {
+    if (studentData.hasOwnProperty(key) && studentData[key] === "") {
+      studentData[key] = null;
+    }
+  }
+  return Student.update(studentData, {
+    where: { studentID: studentData.studentID }
+  })
+    .then(() => Promise.resolve())
+    .catch(() => Promise.reject("unable to update student"));
+}
+
+// addImage function
+function addImage(imageData) {
+  return Image.create(imageData)
+    .then(() => Promise.resolve())
+    .catch(() => Promise.reject("unable to create image"));
+}
+
+// getImages function
+function getImages() {
+  return Image.findAll()
+    .then(data => Promise.resolve(data))
+    .catch(() => Promise.reject("no results returned"));
+}
+//AddProgram(program Data)
+function addProgram(programData) {
+  // Replace empty string values with null
+  for (let key in programData) {
+    if (programData[key] === '') {
+      programData[key] = null;
+    }
+  }
+
   return new Promise((resolve, reject) => {
-  const index = students.findIndex((student) => student.studentID === studentData.studentID);
-  if (index === -1) {
-  reject("Student not found");
-  } else {
-  students[index] = studentData;
-  resolve();
-  }
+    // Create program in database
+    Program.create(programData)
+      .then(() => {
+        resolve();
+      })
+      .catch((error) => {
+        reject("Unable to create program");
+      });
   });
+}
+
+// UpdateProgram(programData)
+function updateProgram(programData) {
+  for (let key in programData) {
+    if (programData.hasOwnProperty(key) && programData[key] === '') {
+      programData[key] = null;
+    }
   }
+
+  return Program.update(programData, {
+    where: {
+      programCode: programData.programCode
+    }
+  })
+    .then(result => {
+      if (result[0] > 0) {
+        return Promise.resolve();
+      } else {
+        return Promise.reject('unable to update program');
+      }
+    })
+    .catch(error => {
+      return Promise.reject('unable to update program');
+    });
+}
+//getProgramByCode(pcode)
+function getProgramByCode(pcode) {
+  return new Promise((resolve, reject) => {
+    Program.findAll({
+      where: {
+        programCode: pcode
+      }
+    })
+      .then(data => {
+        if (data.length > 0) {
+          resolve(data[0]);
+        } else {
+          reject("no results returned");
+        }
+      })
+      .catch(err => {
+        reject("an error occurred while processing the request");
+      });
+  });
+}
+//delectProgramByCode
+function deleteProgramByCode(pcode) {
+  return Program.destroy({ where: { programCode: pcode } })
+    .then((rowsDeleted) => {
+      if (rowsDeleted === 0) {
+        throw new Error(`Program ${pcode} was not found`);
+      }
+      return rowsDeleted;
+    })
+    .catch((error) => {
+      throw error;
+    });
+}
+
+function deleteStudentById(id) {
+  return new Promise((resolve, reject) => {
+    Student.destroy({
+      where: {
+        studentID: id
+      }
+    }).then((rowsDeleted) => {
+      if (rowsDeleted === 0) {
+        reject(new Error('Student not found'));
+      } else {
+        resolve();
+      }
+    }).catch((err) => {
+      reject(err);
+    });
+  });
+}
+
+
 
 module.exports = {
   initialize,
   getAllStudents,
-  getInternationalStudents,
   getPrograms,
   addImage,
   getImages,
-  getNextImageId,
   addStudent,
   getStudentsByStatus,
   getStudentsByProgramCode,
   getStudentsByExpectedCredential,
   getStudentById,
   updateStudent,
+  addProgram,
+  updateProgram,
+  getProgramByCode,
+  deleteProgramByCode,
+  deleteStudentById,
+  
 };

@@ -14,13 +14,15 @@ var express = require("express");
 var app = express();
 const path = require("path");
 const dataService = require("./data-service.js");
-const students = require("./data/students.json");
-const programs = require("./data/programs.json");
+//const students = require("./data/students.json");
+//const programs = require("./data/programs.json");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 // Adding the express.urlencoded middleware
 app.use(express.urlencoded({ extended: true }));
+//sequel
+
 
 var HTTP_PORT = process.env.PORT || 8088;
 
@@ -172,64 +174,56 @@ app.get("/posts", (req, res) => {
   }
 });
 
-// //route to add a "post"
 app.post("/images/add", upload.single("imageFile"), (req, res) => {
   if (req.file) {
-    let streamUpload = (req) => {
-      return new Promise((resolve, reject) => {
-        let stream = cloudinary.uploader.upload_stream((error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(error);
-          }
-        });
-
-        streamifier.createReadStream(req.file.buffer).pipe(stream);
-      });
-    };
-
-    async function upload(req) {
-      let result = await streamUpload(req);
-      console.log(result);
-      return result;
-    }
-
-    upload(req).then((uploaded) => {
-      processForm(uploaded.url);
-    });
+  let streamUpload = (req) => {
+  return new Promise((resolve, reject) => {
+  let stream = cloudinary.uploader.upload_stream((error, result) => {
+  if (result) {
+  resolve(result);
   } else {
-    processForm("");
+  reject(error);
   }
+  });
+  streamifier.createReadStream(req.file.buffer).pipe(stream);
+});
+};
 
-  function processForm(imageUrl) {
-    cloudinary.uploader.upload(imageUrl, (error, result) => {
-      if (error) {
-        console.error(error);
-      } else {
-        const image = {
-          id: dataService.getNextImageId(),
-          url: result.secure_url,
-          created_at: result.created_at,
-        };
-        dataService.addImage(image);
-        res.redirect("/images");
-      }
-    });
+async function upload(req) {
+let result = await streamUpload(req);
+console.log(result);
+return result;
+}
+
+upload(req).then((uploaded) => {
+processForm(uploaded);
+});
+} else {
+  processForm("");
   }
+  
+  function processForm(uploaded) {
+  const imageData = {
+  imageID: uploaded.public_id,
+  imageUrl: uploaded.secure_url,
+  version: uploaded.version,
+  width: uploaded.width,
+  height: uploaded.height,
+  format: uploaded.format,
+  resourceType: uploaded.resource_type,
+  uploadedAt: uploaded.created_at,
+  originalFileName: req.file.originalname,
+  mimeType: req.file.mimetype,
+  };
+  dataService.addImage(imageData);
+res.redirect("/images");
+}
 });
 
-// GET route to return the URLs of images stored on Cloudinary
-app.get("/images", async (req, res) => {
-  try {
-    const result = await cloudinary.api.resources();
-    const urls = result.resources.map((image) => image.url);
-    res.render("images", { images: urls });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+
+
+
+
 
 
 // Read/retrieve - Get One user
@@ -246,47 +240,87 @@ app.get("/users/:id", (req, res) => {
 
 app.get("/students", (req, res) => {
   if (req.query.status) {
-  dataService
-  .getStudentsByStatus(req.query.status)
-  .then((students) => {
-  res.render("students", { students: students });
-  })
-  .catch((err) => {
-  res.render("students", { message: "no results" });
-  });
+    dataService
+      .getStudentsByStatus(req.query.status)
+      .then((students) => {
+        if (students.length > 0) {
+          res.render("students", { students: students });
+        } else {
+          res.render("students", { message: "no results" });
+        }
+      })
+      .catch((err) => {
+        res.render("students", { message: "no results" });
+      });
   } else if (req.query.program) {
-  dataService
-  .getStudentsByProgramCode(req.query.program)
-  .then((students) => {
-  res.render("students", { students: students });
-  })
-  .catch((err) => {
-  res.render("students", { message: "no results" });
-  });
+    dataService
+      .getStudentsByProgramCode(req.query.program)
+      .then((students) => {
+        if (students.length > 0) {
+          res.render("students", { students: students });
+        } else {
+          res.render("students", { message: "no results" });
+        }
+      })
+      .catch((err) => {
+        res.render("students", { message: "no results" });
+      });
   } else if (req.query.credential) {
-  dataService
-  .getStudentsByExpectedCredential(req.query.credential)
-  .then((students) => {
-  res.render("students", { students: students });
-  })
-  .catch((err) => {
-  res.render("students", { message: "no results" });
-  });
+    dataService
+      .getStudentsByExpectedCredential(req.query.credential)
+      .then((students) => {
+        if (students.length > 0) {
+          res.render("students", { students: students });
+        } else {
+          res.render("students", { message: "no results" });
+        }
+      })
+      .catch((err) => {
+        res.render("students", { message: "no results" });
+      });
   } else {
-  dataService
-  .getAllStudents()
-  .then((students) => {
-  res.render("students", { students: students });
-  })
-  .catch((err) => {
-  res.render("students", { message: "no results" });
-  });
+    dataService
+      .getAllStudents()
+      .then((students) => {
+        if (students.length > 0) {
+          res.render("students", { students: students });
+        } else {
+          res.render("students", { message: "no results" });
+        }
+      })
+      .catch((err) => {
+        res.render("students", { message: "no results" });
+      });
   }
-  });
+});
+
+app.get("/students/add", (req, res) => {
+  dataService.getPrograms()
+    .then((data) => {
+      res.render("addStudent", { programs: data });
+    })
+    .catch((err) => {
+      console.log(err);
+      res.render("addStudent", { programs: [] });
+    });
+});
+
+app.post("/students/add", (req, res) => {
+  dataService
+    .addStudent(req.body)
+    .then((data) => {
+      res.redirect("/students");
+    })
+    .catch((err) => {
+      console.log(err);
+      res.status(500).send("Error adding student");
+    });
+});
+
 
   app.post("/student/update", (req, res) => {
     updateStudent(req.body)
-      .then(() => {
+      .then((data) => {
         res.redirect("/students");
       })
       .catch((err) => {
@@ -298,20 +332,45 @@ app.get("/students", (req, res) => {
 
 
   app.get("/student/:id", (req, res) => {
-    const studentId = req.params.id;
-    dataService
-      .getStudentById(studentId)
-      .then((student) => {
-        if (student) {
-          res.render("student", { student: student });
+    
+    // initialize an empty object to store the values
+    let viewData = {};
+
+    dataService.getStudentByNum(req.params.studentId).then((data) => {
+        if (data) {
+            viewData.student = data; //store student data in the "viewData" object as "student"
         } else {
-          res.render("student", { message: "no results" });
+            viewData.student = null; // set student to null if none were returned
         }
-      })
-      .catch((err) => {
-        res.render("student", { message: "no results" });
+    }).catch(() => {
+        viewData.student = null; // set student to null if there was an error 
+    }).then(dataService.getPrograms)
+    .then((data) => {
+        viewData.programs = data; // store program data in the "viewData" object as "programs"
+
+        // loop through viewData.programs and once we have found the programCode that matches
+        // the student's "program" value, add a "selected" property to the matching 
+        // viewData.programs object
+
+        for (let i = 0; i < viewData.programs.length; i++) {
+            if (viewData.programs[i].programCode == viewData.student.program) {
+                viewData.programs[i].selected = true;
+            }
+        }
+
+    }).catch(() => {
+        viewData.programs = []; // set programs to empty if there was an error
+    }).then(() => {
+        if (viewData.student == null) { // if no student - return an error
+            res.status(404).send("Student Not Found");
+        } else {
+            res.render("student", { viewData: viewData }); // render the "student" view
+        }
+    }).catch((err)=>{
+        res.status(500).send("Unable to Show Students");
       });
-  });
+});
+
   
 
 app.get("/intlstudents", (req, res) => {
@@ -328,29 +387,110 @@ app.get("/intlstudents", (req, res) => {
     });
 });
 
-app.get("/programs", (req, res) => {
+// GET route to return the URLs of images stored on Cloudinary
+app.get("/images", async (req, res) => {
+  try {
+  const result = await cloudinary.api.resources();
+  const urls = result.resources.map((image) => image.url);
+  if (urls.length > 0) {
+  res.render("images", { images: urls });
+  } else {
+  res.render("images", { message: "no results" });
+  }
+  } catch (err) {
+  console.log(err);
+  res.status(500).json({ error: "Internal server error" });
+  }
+  });
+  
+  // Updated /programs route to render "no results" message if no programs are found
+  app.get("/programs", (req, res) => {
   dataService
-    .getPrograms()
-    .then((programs) => {
-      res.render("programs", { programs: programs });
+  .getPrograms()
+  .then((programs) => {
+  if (programs.length > 0) {
+  res.render("programs", { programs: programs });
+  } else {
+  res.render("programs", { message: "no results" });
+  }
+  })
+  .catch((err) => {
+  res.json({ message: err });
+  });
+  });
+  
+  app.get('/students/delete/:studentID', (req, res) => {
+    const id = req.params.studentID;
+  
+    dataService.deleteStudentById(id)
+      .then(() => {
+        res.redirect('/students');
+      })
+      .catch((err) => {
+        res.status(500).send('Unable to Remove Student / Student not found');
+      });
+  });
+  
+  
+
+// handle POST requests to /programs/add
+app.post('/programs/add', (req, res) => {
+  // call addProgram function with POST data
+  dataService.addProgram(req.body)
+    .then(() => {
+      // redirect to /programs
+      res.redirect('/programs');
     })
-    .catch((err) => {
-      res.json({ message: err });
+    .catch(err => {
+      // render error page if error occurs
+      res.status(500).send(err);
     });
 });
 
-// Adding the "Post" route
-app.post("/students/add", (req, res) => {
-  dataService
-    .addStudent(req.body)
+// handle GET requests to /programs/add
+app.get('/programs/add', (req, res) => {
+  // render addProgram view
+  res.render('addProgram');
+});
+
+// Define routes(programUpdate)
+app.post('/program/update', (req, res) => {
+  dataService.updateProgram(req.body)
     .then(() => {
-      res.redirect("/students");
+      res.redirect('/programs');
     })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).send("Error adding student");
+    .catch(() => {
+      res.redirect('/programs');
     });
 });
+
+// GET /program/:programCode
+app.get('/program/:programCode', (req, res) => {
+  dataService.getProgramByCode(req.params.programCode)
+    .then(program => {
+      if (program) {
+        res.render('program', { program });
+      } else {
+        res.status(404).send("Program Not Found");
+      }
+    })
+    .catch(error => {
+      res.status(500).send("Program Not Found");
+    });
+});
+
+//programs/delect/:programCode
+app.get('/programs/delete/:programCode', (req, res) => {
+  dataService.deleteProgramByCode(req.params.programCode)
+    .then(() => {
+      res.redirect('/programs');
+    })
+    .catch(() => {
+      res.status(500).send('Unable to Remove Program / Program not found)');
+    });
+});
+
+
 
 // This use() will not allow requests to go beyond it
 // so we place it at the end of the file, after the other routes.

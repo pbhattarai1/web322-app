@@ -1,19 +1,35 @@
+<a href="/images/add" class="btn btn-success pull-right">Add New Image</a>
 <div class="row">
     <div class="col-md-12">
         <h2>Images</h2>
         <hr />
     </div>
 
-    {{#if images}}
-        {{#each images}}
-            <div class="col-md-4">
-                <img src="https://res.cloudinary.com/seneca-web322/image/upload/{{this}}" class="img-responsive img-thumbnail" />
+{{#if images}}
+    {{#each images}}
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <a href="{{this.url}}" target="_blank">
+                        <img src="{{this.url}}" class="img-responsive img-thumbnail" />
+                    </a>
+                    <ul class="list-unstyled">
+                        <li><strong>Image ID:</strong> {{imageID}}</li>
+                        <li><strong>Original Filename:</strong> {{originalFileName}}</li>
+                        <li><strong>Uploaded At:</strong> {{this.uploadedAt}}</li>
+                        <li><strong>Image Format:</strong> {{this.format}}</li>
+                        <li><strong>Image Size:</strong> {{this.width}} x {{this.height}}</li>
+                        <li><strong>MIME Type:</strong> {{this.mimeType}}</li>
+                    </ul>
+                </div>
             </div>
-        {{/each}}
-    {{else}}
-        <div class="col-md-12 text-center">
-            <strong>No Images Available</strong>
         </div>
-    {{/if}}
+    {{/each}}
+{{else}}
+    <div class="col-md-12 text-center">
+        <strong>No Images Available</strong>
+    </div>
+{{/if}}
+
 </div>
 

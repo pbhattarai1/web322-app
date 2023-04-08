@@ -1,6 +1,9 @@
 //const { Sequelize, Op } = require('sequelize');
 
 const Sequelize = require('sequelize');
+const dataServiceAuth = require('./data-service-auth.js');
+
+
 
 var sequelize = new Sequelize('yrorypxv', 'yrorypxv', 'yLM1QNXwpb38dcZ7jAEUHa5HZEMza9dV', {
   host: 'raja.db.elephantsql.com',
@@ -330,6 +333,7 @@ function deleteProgramByCode(pcode) {
 
 function deleteStudentById(id) {
   return new Promise((resolve, reject) => {
+    console.log(id);
     Student.destroy({
       where: {
         studentID: id

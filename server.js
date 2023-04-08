@@ -1,9 +1,9 @@
 /*********************************************************************************
- *  WEB322 – Assignment 02
+ *  WEB322 – Assignment 05
  *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part *  of this assignment has been copied manually or electronically from any other source
  *  (including 3rd party web sites) or distributed to other students.
  *
- *  Name: __Pushparaj Bhattarai__ Student ID: _159658210___ Date: _____2023/02/03___________
+ *  Name: __Pushparaj Bhattarai__ Student ID: _159658210___ Date: _____2023/03/26___________
  *
  *  Online (Cyclic) Link: https://defiant-dove-tutu.cyclic.app
  *
@@ -19,12 +19,18 @@ const dataService = require("./data-service.js");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const clientSessions = require("client-sessions");
+const dataServiceAuth = require('./data-service-auth.js');
+const mongoose = require('mongoose');
 // Adding the express.urlencoded middleware
-app.use(express.urlencoded({ extended: true }));
+
 //sequel
 
 
+
 var HTTP_PORT = process.env.PORT || 8088;
+
+
 
 //config:
 cloudinary.config({
@@ -63,6 +69,28 @@ app.engine('hbs', expressHandlebars.engine({
   },
   layoutsDir: __dirname + "/views/layout",
   defaultLayout: 'main'}));
+
+  app.use(clientSessions({
+    cookieName: "session", // this is the object name that will be added to 'req'
+    secret: "mysecretcode", // this should be a long un-guessable string.
+    duration: 2 * 60 * 1000, // duration of the session in milliseconds (2 minutes)
+    activeDuration: 1000 * 60 // the session will be extended by this many ms each request (1 minute)
+  }));
+
+  app.use(express.urlencoded({ extended: false }));
+
+  app.use(function(req, res, next) {
+    res.locals.session = req.session;
+    next();
+  });
+
+  function ensureLogin(req, res, next) {
+    if (req.session && req.session.user) {
+      next();
+    } else {
+      res.redirect("/login");
+    }
+  }
 
 //multer
 const upload = multer(); //no { storage: storage } since we are not using disk storage
@@ -238,7 +266,7 @@ app.get("/users/:id", (req, res) => {
   `);
 });
 
-app.get("/students", (req, res) => {
+app.get("/students",ensureLogin, (req, res) => {
   if (req.query.status) {
     dataService
       .getStudentsByStatus(req.query.status)
@@ -388,7 +416,7 @@ app.get("/intlstudents", (req, res) => {
 });
 
 // GET route to return the URLs of images stored on Cloudinary
-app.get("/images", async (req, res) => {
+app.get("/images",ensureLogin, async (req, res) => {
   try {
   const result = await cloudinary.api.resources();
   const urls = result.resources.map((image) => image.url);
@@ -404,7 +432,7 @@ app.get("/images", async (req, res) => {
   });
   
   // Updated /programs route to render "no results" message if no programs are found
-  app.get("/programs", (req, res) => {
+  app.get("/programs",ensureLogin, (req, res) => {
   dataService
   .getPrograms()
   .then((programs) => {
@@ -419,8 +447,8 @@ app.get("/images", async (req, res) => {
   });
   });
   
-  app.get('/students/delete/:studentID', (req, res) => {
-    const id = req.params.studentID;
+  app.get('/students/delete/:id', (req, res) => {
+    const id = req.params.studentId;
   
     dataService.deleteStudentById(id)
       .then(() => {
@@ -490,6 +518,55 @@ app.get('/programs/delete/:programCode', (req, res) => {
     });
 });
 
+// GET route to render login view
+app.get("/login", function(req, res) {
+  res.render("login");
+});
+
+// GET route to render register view
+app.get("/register", function(req, res) {
+  res.render("register");
+});
+
+// POST route to register user
+app.post("/register", function(req, res) {
+  dataServiceAuth.registerUser(req.body)
+  .then(() => {
+      res.render("register", { successMessage: "User created" });
+  })
+  .catch((err) => {
+      res.render("register", { errorMessage: err, userName: req.body.userName });
+  });
+});
+
+// POST route to authenticate user
+app.post("/login", function(req, res) {
+  req.body.userAgent = req.get('User-Agent');
+  dataServiceAuth.checkUser(req.body)
+  .then((user) => {
+      req.session.user = {
+          userName: user.userName,
+          email: user.email,
+          loginHistory: user.loginHistory
+      }
+      res.redirect("/students");
+  })
+  .catch((err) => {
+      res.render("login", { errorMessage: err, userName: req.body.userName });
+  });
+});
+
+// GET route to logout user
+app.get("/logout", function(req, res) {
+  req.session.reset();
+  res.redirect("/");
+});
+
+// GET route to render userHistory view
+app.get("/userHistory", ensureLogin, function(req, res) {
+  res.render("userHistory");
+});
+
 
 
 // This use() will not allow requests to go beyond it
@@ -503,4 +580,21 @@ app.use((req, res) => {
 });
 
 // setup http server to listen on HTTP_PORT
-app.listen(HTTP_PORT, onHttpStart, dataService.initialize);
+//app.listen(HTTP_PORT, onHttpStart, dataService.initialize);
+dataService.initialize()
+.then(dataServiceAuth.initialize)
+.then(function(){
+    app.listen(HTTP_PORT, function(){
+        console.log("app listening on: " + HTTP_PORT)
+    });
+}).catch(function(err){
+    console.log("unable to start server: " + err);
+});
+
+// dataServiceAuth.initialize().then(() => {
+//   app.listen(HTTP_PORT, onHttpStart);
+// }).catch((err) => {
+//   console.log(err);
+// });
+
+
